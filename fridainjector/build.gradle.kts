@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "me.voltual.vb.library" 
+    namespace = "me.voltual.vb.fridainjector" 
     compileSdk = 36
 
     defaultConfig {
