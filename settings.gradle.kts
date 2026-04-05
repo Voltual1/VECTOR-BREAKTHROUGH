@@ -17,5 +17,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = ""
+rootProject.name = "Vector-Breakthrough"
 include(":fridainjector")
