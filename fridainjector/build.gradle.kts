@@ -2,10 +2,11 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
-    namespace = "me.voltual.vb.fridainjector" 
+    namespace = "me.voltual.fridainjector" 
     compileSdk = 36
 
     defaultConfig {
@@ -32,10 +33,23 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
+    kotlin {
+        jvmToolchain(17)
+    }
+
 }
 
 dependencies {
     // 兼容低版本 Java 8 特性脱糖
     coreLibraryDesugaring(libs.android.desugar)
-  implementation(libs.libsu.core)
+      implementation(libs.libsu.core)
+        implementation(libs.kotlinx.coroutines.android)
+
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
+    }
 }
