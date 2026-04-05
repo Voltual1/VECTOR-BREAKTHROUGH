@@ -1,8 +1,7 @@
 package me.voltual.vb.ui
 
 import android.content.Context
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
@@ -19,10 +18,10 @@ import me.voltual.vb.core.database.dao.ScriptDao
 import me.voltual.vb.core.database.entity.ScriptEntry
 
 enum class RootStatus {
-    UNKNOWN,      // 尚未检查
-    GRANTING,     // 正在请求 / 初始化中
-    GRANTED,      // 已授权
-    DENIED        // 被拒绝
+    UNKNOWN,
+    GRANTING,
+    GRANTED,
+    DENIED
 }
 
 class HomeViewModel(
@@ -30,11 +29,10 @@ class HomeViewModel(
     private val context: Context
 ) : ViewModel(), OnMessage {
 
-    // ========== Root 权限状态 ==========
+    // 使用 mutableStateOf 并显式导入 getValue/setValue
     var rootStatus by mutableStateOf(RootStatus.UNKNOWN)
         private set
 
-    // ========== 脚本相关 ==========
     val allScripts: StateFlow<List<ScriptEntry>> = scriptDao.getAllScripts()
         .stateIn(
             scope = viewModelScope,
@@ -45,20 +43,15 @@ class HomeViewModel(
     var selectedScript by mutableStateOf<ScriptEntry?>(null)
     var targetPackage by mutableStateOf("")
 
-    // ========== 注入状态 ==========
     var isInjecting by mutableStateOf(false)
         private set
 
-    // ========== 日志 ==========
     val logs = mutableStateListOf<String>()
 
     init {
         checkRootPermission()
     }
 
-    /**
-     * 检查 Root 权限（libsu 会自动弹出授权窗口）
-     */
     fun checkRootPermission() {
         viewModelScope.launch {
             rootStatus = RootStatus.GRANTING
@@ -79,20 +72,13 @@ class HomeViewModel(
         }
     }
 
-    /**
-     * 实现 OnMessage 接口，接收来自 Frida 脚本的 send() 消息
-     */
     override fun onMessage(data: String?) {
         data?.let {
             logs.add(0, "[Frida] $it")
         }
     }
 
-    /**
-     * 执行注入
-     */
     fun performInjection() {
-        // 权限检查
         if (rootStatus != RootStatus.GRANTED) {
             logs.add(0, "[Error] 请先授予 Root 权限")
             checkRootPermission()
@@ -112,18 +98,15 @@ class HomeViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 构建 Injector（根据你的设备架构选择对应的 binary）
                 val injector = FridaInjector.Builder(context)
                     .withArm64Injector("frida-inject-17.9.1-android-arm64")
                     .build()
 
-                // 构建 Agent
                 val agent = FridaAgent.Builder(context)
-                    .withAgentFromString(script.content)
+                    .withAgentFromString(script.content)  // 确保字段名为 content
                     .withOnMessage(this@HomeViewModel)
                     .build()
 
-                // 执行注入（spawn = true 表示如果进程未运行则自动启动）
                 injector.inject(agent, pkg, spawn = true)
 
                 withContext(Dispatchers.Main) {

@@ -24,7 +24,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val scripts by viewModel.allScripts.collectAsState()
-    var expanded by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -92,9 +92,9 @@ fun HomeScreen(
 
         // ---------- 脚本选择下拉框 ----------
         ExposedDropdownMenuBox(
-            expanded = expanded,
+            expanded = menuExpanded,
             onExpandedChange = {
-                if (viewModel.rootStatus == RootStatus.GRANTED) expanded = !expanded
+                if (viewModel.rootStatus == RootStatus.GRANTED) menuExpanded = !menuExpanded
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -104,19 +104,19 @@ fun HomeScreen(
                 readOnly = true,
                 enabled = viewModel.rootStatus == RootStatus.GRANTED,
                 label = { Text("选择脚本") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
                 modifier = Modifier.menuAnchor().fillMaxWidth()
             )
             ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
             ) {
                 scripts.forEach { script ->
                     DropdownMenuItem(
                         text = { Text(script.name) },
                         onClick = {
                             viewModel.selectedScript = script
-                            expanded = false
+                            menuExpanded = false
                         }
                     )
                 }
