@@ -180,6 +180,7 @@ dependencies {
   implementation(libs.tink.android)
   implementation(libs.protobuf.kotlin)
   implementation(libs.androidx.work.runtime)
+    implementation(project(":fridainjector"))
 }
 
 protobuf {
