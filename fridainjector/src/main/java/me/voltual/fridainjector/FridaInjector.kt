@@ -103,44 +103,35 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun executeInjectCommand(packageName: String, pid: String, agentPath: String) {
-    log("[System] 正在使用 Frida 17.9.1 + QuickJS 优化逻辑...")
+    log("[System] 正在使用 17.9.1 优化指令注入...")
 
-    // 1. 确保 SELinux 是 Permissive
+    // 1. 确保 SELinux 是关闭的
     Shell.cmd("setenforce 0").exec()
 
-    // 2. 根据你提供的源码和文档：
-    // - 使用 -p [pid] 注入特定进程
-    // - 使用 -s [script] 加载脚本
-    // - 使用 -R qjs 强制使用 QuickJS (文档说这是默认，但我们显式指定更稳)
-    // - 使用 -e (eternalize) 注入后脱离
-    // 注意：移除 --runtime=v8，那是导致 17.x 在 Android 10 上报错误 4 的元凶
-    
+    // 2. 构造 17.9.1 最稳健的指令：
+    // -p: 使用 PID 注入
+    // -s: 脚本路径
+    // -R qjs: 强制使用 QuickJS (解决 V8 在 Android 10 上的分配失败问题)
+    // -e: 注入后脱离
     val command = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -R qjs -e"
     
-    log("[System] 执行 17.x 指令: $command")
+    log("[System] 执行 17.9.1 指令: $command")
 
     val result = Shell.cmd(command).exec()
     
     if (result.isSuccess) {
-        log("[Success] 17.9.1 注入指令已发送 (QuickJS 模式)")
+        log("[Success] 17.9.1 注入成功 (QuickJS)")
     } else {
         log("[Error] 17.9.1 注入失败，错误码: ${result.code}")
         
-        // 如果 QuickJS 也报错误 4，尝试完全不带运行时参数
-        if (result.code == 4) {
-            log("[System] 尝试不带运行时参数的最后方案...")
-            val lastResort = "cat /dev/null | ${injector.path} -p $pid -s $agentPath "
-            val lastResult = Shell.cmd(lastResort).exec()
-            if (lastResult.isSuccess) {
-                log("[Success] 自动运行时模式注入成功")
-                return
-            }
-            log("[Error] 最终尝试也失败，错误码: ${lastResult.code}")
+        // 打印详细的错误描述，这对解决 Error 4 至关重要
+        if (result.err.isNotEmpty()) {
+            log("[frida-err-detail] 具体的错误原因:")
+            result.err.forEach { log(" >> $it") }
         }
     }
     
     result.out.forEach { log("[frida-out] $it") }
-    result.err.forEach { log("[frida-err] $it") }
 }
     
     private fun log(msg: String) {
