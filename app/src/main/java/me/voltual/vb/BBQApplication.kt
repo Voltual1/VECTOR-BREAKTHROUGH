@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import me.voltual.vb.core.database.*
+import com.topjohnwu.superuser.Shell
 import me.voltual.vb.core.ui.theme.ThemeColorStore
 import me.voltual.vb.core.ui.theme.ThemeManager
 import org.koin.android.ext.koin.androidContext
@@ -32,6 +33,13 @@ class BBQApplication : Application(), KoinStartup {
   override fun onCreate() {
     super.onCreate()
     instance = this
+    
+    // 必须在所有 Shell 操作之前配置 libsu
+        Shell.setDefaultBuilder(
+            Shell.Builder.create()
+                .setFlags(Shell.FLAG_REDIRECT_STDERR) // 建议加上，方便调试
+                .setTimeout(10)
+        )
 
     // 初始化
     database = AppDatabase.getDatabase(this)

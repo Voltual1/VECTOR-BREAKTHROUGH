@@ -15,15 +15,6 @@ class FridaInjector private constructor(builder: Builder) {
     private val injector: File = builder.injector ?: throw RuntimeException("did you forget to call init()?")
 
     companion object {
-        init {
-            // 移除已废弃的 FLAG_REDIRECT_STDERR
-            // 现在 libsu 默认会分别处理 stdout 和 stderr
-            Shell.setDefaultBuilder(
-                Shell.Builder.create()
-                    .setTimeout(10)
-            )
-        }
-
         private fun extractInjectorIfNeeded(context: Context, name: String): File {
             val injectorPath = File(context.filesDir, "injector")
             val injector = File(injectorPath, name)

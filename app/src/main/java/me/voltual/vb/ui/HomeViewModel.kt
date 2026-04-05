@@ -98,6 +98,13 @@ class HomeViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+            if (!Shell.getShell().isRoot) {
+            withContext(Dispatchers.Main) {
+                logs.add(0, "[Error] Root 权限丢失，请重新授权")
+                rootStatus = RootStatus.DENIED
+            }
+            return@launch
+        }
                 val injector = FridaInjector.Builder(context)
                     .withArm64Injector("frida-inject-17.9.1-android-arm64")
                     .build()
