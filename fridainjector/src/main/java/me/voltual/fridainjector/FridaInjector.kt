@@ -105,33 +105,38 @@ class FridaInjector private constructor(builder: Builder) {
     private fun executeInjectCommand(packageName: String, pid: String, agentPath: String) {
     log("[System] 尝试连接 PID: $pid ...")
     
-    // 1. 使用 'exec < /dev/null' 重定向标准输入，解决 tcgetattr failed: Invalid argument
-    // 2. 使用 '-e' (eternalize) 注入后立即退出注入器进程，保持脚本运行
-    // 3. 使用 '-R v8' 指定运行时 (根据源码 options 里的 'runtime')
-    // 4. 移除所有源码里不存在的参数 (--non-interactive 等)
+    // 1. 使用 cat /dev/null | ... 强制提供一个空的 stdin 管道
+    // 2. 使用长参数名 --pid, --script, --eternalize 确保解析成功
+    // 3. 暂时移除 --runtime 参数，让 Frida 自动决定
+    // 4. 确保命令是一个整体字符串，交给 sh -c 执行
     
-    val command = "exec < /dev/null; ${injector.path} -p $pid -s $agentPath -R v8 -e"
+    val command = "cat /dev/null | ${injector.path} --pid $pid --script $agentPath --eternalize"
     
-    log("[System] 执行指令: $command")
+    log("[System] 执行最终指令: $command")
 
-    // 使用 libsu 执行
     val result = Shell.cmd(command).exec()
     
     if (result.isSuccess) {
-        log("[Success] 注入成功 (Eternalized)")
+        log("[Success] 注入指令已成功发送并脱离 (Eternalized)")
     } else {
         log("[Error] 注入失败，错误码: ${result.code}")
         
-        // 打印详细错误方便调试
-        result.err.forEach { log("[frida-err] $it") }
-        result.out.forEach { log("[frida-out] $it") }
-        
-        if (result.code == 4) {
-            log("[Tip] 依然返回错误码 4？请检查：")
-            log("1. 目标进程 $packageName 是否在注入瞬间崩溃了？")
-            log("2. 尝试换成 -R qjs (QuickJS) 看看是否兼容性更好。")
+        // 如果还是错误 1，说明 --eternalize 可能也不支持，尝试换成 -e
+        if (result.code == 1) {
+            log("[System] 尝试使用备用参数格式...")
+            val fallbackCommand = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -e"
+            val fallbackResult = Shell.cmd(fallbackCommand).exec()
+            if (fallbackResult.isSuccess) {
+                log("[Success] 备用方案注入成功")
+                return
+            }
+            log("[Error] 备用方案也失败了，错误码: ${fallbackResult.code}")
+            fallbackResult.err.forEach { log("[frida-err] $it") }
         }
     }
+    
+    result.out.forEach { log("[frida-out] $it") }
+    result.err.forEach { log("[frida-err] $it") }
 }
     
     private fun log(msg: String) {
