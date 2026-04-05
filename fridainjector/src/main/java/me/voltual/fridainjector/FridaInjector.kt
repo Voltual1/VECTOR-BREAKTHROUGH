@@ -103,35 +103,30 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun executeInjectCommand(packageName: String, pid: String, agentPath: String) {
-    log("[System] 尝试连接 PID: $pid ...")
+    log("[System] 回归测试: 使用 Frida 12.8.2 逻辑...")
+
+    // 1. 必须放宽 SELinux，否则即使是 12.8.2 也会在 Android 10 上报错误 4
+    Shell.cmd("setenforce 0").exec()
+
+    // 2. 完全还原 Java 代码中的命令格式:
+    // [injector] -n [packageName] -s [agentPath] --runtime=v8 -e
+    // 注意：这里用的是 -n (包名) 而不是 -p (PID)
+    val command = "cat /dev/null | ${injector.path} -n $packageName -s $agentPath --runtime=v8 -e"
     
-    // 1. 使用 cat /dev/null | ... 强制提供一个空的 stdin 管道
-    // 2. 使用长参数名 --pid, --script, --eternalize 确保解析成功
-    // 3. 暂时移除 --runtime 参数，让 Frida 自动决定
-    // 4. 确保命令是一个整体字符串，交给 sh -c 执行
-    
-    val command = "cat /dev/null | ${injector.path} --pid $pid --script $agentPath --eternalize"
-    
-    log("[System] 执行最终指令: $command")
+    log("[System] 执行原始指令: $command")
 
     val result = Shell.cmd(command).exec()
     
     if (result.isSuccess) {
-        log("[Success] 注入指令已成功发送并脱离 (Eternalized)")
+        log("[Success] 注入指令已发送 (12.8.2 模式)")
     } else {
         log("[Error] 注入失败，错误码: ${result.code}")
         
-        // 如果还是错误 1，说明 --eternalize 可能也不支持，尝试换成 -e
-        if (result.code == 1) {
-            log("[System] 尝试使用备用参数格式...")
-            val fallbackCommand = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -e"
-            val fallbackResult = Shell.cmd(fallbackCommand).exec()
-            if (fallbackResult.isSuccess) {
-                log("[Success] 备用方案注入成功")
-                return
-            }
-            log("[Error] 备用方案也失败了，错误码: ${fallbackResult.code}")
-            fallbackResult.err.forEach { log("[frida-err] $it") }
+        // 如果 12.8.2 也报错误 4，那 100% 是 SELinux 或 Magisk 挂载问题
+        if (result.code == 4) {
+            log("[Critical] 12.8.2 也返回错误 4！")
+            log("[Check] 请在终端输入 'getenforce' 确认是否为 Permissive")
+            log("[Check] 尝试手动执行: su -c 'setenforce 0'")
         }
     }
     
