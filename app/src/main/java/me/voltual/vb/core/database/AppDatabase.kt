@@ -14,30 +14,27 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import me.voltual.vb.core.database.dao.*
 import me.voltual.vb.core.database.entity.*
-import me.voltual.vb.core.database.repository.*
 
-@Database(entities = [LogEntry::class], version = 1, exportSchema = false)
+@Database(entities = [LogEntry::class, ScriptEntry::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
-  abstract fun logDao(): LogDao
+    abstract fun logDao(): LogDao
+    abstract fun scriptDao(): ScriptDao
 
-  companion object {
-    @Volatile private var INSTANCE: AppDatabase? = null
+    companion object {
+        @Volatile private var INSTANCE: AppDatabase? = null
 
-    fun getDatabase(context: Context): AppDatabase {
-      return INSTANCE
-        ?: synchronized(this) {
-          val instance =
-            Room.databaseBuilder(
-                context.applicationContext,
-                AppDatabase::class.java,
-                "app_database",
-              )
-              /*                    .addMigrations(
-              )*/
-              .build()
-          INSTANCE = instance
-          instance
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "app_database"
+                )
+                .fallbackToDestructiveMigration() // 开发阶段简单处理版本升级
+                .build()
+                INSTANCE = instance
+                instance
+            }
         }
     }
-  }
 }
