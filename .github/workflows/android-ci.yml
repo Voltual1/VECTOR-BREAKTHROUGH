@@ -28,9 +28,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         
+      - name: Gradle Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ${{ github.workspace }}/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-        
+        
       # 格式化代码
-#      - name: Apply Code Format
-#        run: ./gradlew spotlessApply
+  #    - name: Apply Code Format
+      #  run: ./gradlew spotlessApply
 
       - name: Decode Keystore
         env:
@@ -39,7 +50,7 @@ jobs:
           echo $ENCODED_STRING | base64 -d > app/tag_keystore.p12
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
         env:
           KEYSTORE_PATH: tag_keystore.p12
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -47,9 +58,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}          
 
       # 2. 新增：将源码打包成 ZIP
-#      - name: Archive Source Code
-#        run: |
-#          zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*" "app/tag_keystore.p12"
+  #    - name: Archive Source Code
+       # run: |
+  #        zip -r source-code.zip . -x "*.git*" "*/build/*" ".gradle/*" "*.iml" ".idea/*" "app/tag_keystore.p12"
 
       - name: Get version info
         id: version
@@ -77,6 +88,16 @@ jobs:
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
             app/build/outputs/mapping/release/mapping.txt
-#            source-code.zip
+         #   source-code.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Save Gradle cache
+        if: ${{ success() }}
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ${{ github.workspace }}/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle.kts', '**/settings.gradle.kts') }}          
