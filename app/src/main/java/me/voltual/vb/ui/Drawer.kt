@@ -31,6 +31,11 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material.icons.rounded.Source
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.DataArray
 import me.voltual.vb.R
 import me.voltual.vb.data.DrawerMenuDataStore
 
@@ -72,23 +77,57 @@ fun NavigationDrawerItems(
 ) {
   val context = LocalContext.current
 
-  val allDrawerItems = remember {
+
+val allDrawerItems = remember {
     mutableListOf(
-      DrawerItem("home", "首页", IconSource.Resource(R.drawable.ic_menu_home), Home),
-      DrawerItem(
-        "settings",
-        "主题设置",
-        IconSource.Resource(R.drawable.ic_menu_settings),
-        ThemeCustomize,
-      ),
-      DrawerItem(
-        "update_settings",
-        "更新设置",
-        IconSource.Resource(R.drawable.asusupdate),
-        UpdateSettings,
-      ),
+        DrawerItem("home", "首页", IconSource.Resource(R.drawable.ic_menu_home), Home),
+        
+        // --- 方案 1: 硬核终端风 (最像运行脚本的地方) ---
+        DrawerItem(
+            "script_terminal", 
+            "脚本库 (Terminal)", 
+            IconSource.Vector(Icons.Rounded.Terminal), 
+            ScriptLibrary
+        ),
+
+        // --- 方案 2: 文件夹管理风 (最契合“库”的概念) ---
+        DrawerItem(
+            "script_source", 
+            "脚本库 (Source)", 
+            IconSource.Vector(Icons.Rounded.Source), 
+            ScriptLibrary
+        ),
+
+        // --- 方案 3: 标准编程风 (简单直观) ---
+        DrawerItem(
+            "script_code", 
+            "脚本库 (Code)", 
+            IconSource.Vector(Icons.Rounded.Code), 
+            ScriptLibrary
+        ),
+
+        // --- 方案 4: 现代抽象风 (看起来很高端) ---
+        DrawerItem(
+            "script_data", 
+            "脚本库 (DataArray)", 
+            IconSource.Vector(Icons.Rounded.DataArray), 
+            ScriptLibrary
+        ),
+
+        DrawerItem(
+            "settings",
+            "主题设置",
+            IconSource.Resource(R.drawable.ic_menu_settings),
+            ThemeCustomize,
+        ),
+        DrawerItem(
+            "update_settings",
+            "更新设置",
+            IconSource.Resource(R.drawable.asusupdate),
+            UpdateSettings,
+        ),
     )
-  }
+}
   val allItemsMap = remember { allDrawerItems.associateBy { it.id } }
 
   var orderedItems by remember { mutableStateOf<List<DrawerItem>>(emptyList()) }

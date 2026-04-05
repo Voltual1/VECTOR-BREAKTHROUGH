@@ -65,6 +65,9 @@ fun BBQNavDisplay(
 
         is ThemeCustomize ->
           NavEntry(key) { ThemeCustomizeScreen(modifier = Modifier.fillMaxSize()) }
+          
+        is ScriptLibrary ->
+          NavEntry(key) { ScriptLibraryScreen(modifier = Modifier.fillMaxSize()) }
 
         is UpdateSettings ->
           NavEntry(key) { UpdateSettingsScreen(snackbarHostState = snackbarHostState) }
