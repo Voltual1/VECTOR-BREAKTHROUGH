@@ -1,4 +1,4 @@
-package com.igio90.fridainjector
+package me.voltual.fridainjector
 
 import android.content.Context
 import android.content.pm.PackageManager
