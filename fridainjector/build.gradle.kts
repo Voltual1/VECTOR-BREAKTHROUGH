@@ -37,12 +37,5 @@ android {
 dependencies {
     // 兼容低版本 Java 8 特性脱糖
     coreLibraryDesugaring(libs.android.desugar)
-     implementation("com.chrisplus.rootmanager:library:2.0.5")
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
-    }
+implementation("com.chrisplus.rootmanager:library:2.0.5")
 }
