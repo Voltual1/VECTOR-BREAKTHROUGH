@@ -103,30 +103,39 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun executeInjectCommand(packageName: String, pid: String, agentPath: String) {
-    log("[System] 回归测试: 使用 Frida 12.8.2 逻辑...")
+    log("[System] 正在使用 Frida 17.9.1 + QuickJS 优化逻辑...")
 
-    // 1. 必须放宽 SELinux，否则即使是 12.8.2 也会在 Android 10 上报错误 4
+    // 1. 确保 SELinux 是 Permissive
     Shell.cmd("setenforce 0").exec()
 
-    // 2. 完全还原 Java 代码中的命令格式:
-    // [injector] -n [packageName] -s [agentPath] --runtime=v8 -e
-    // 注意：这里用的是 -n (包名) 而不是 -p (PID)
-    val command = "cat /dev/null | ${injector.path} -n $packageName -s $agentPath --runtime=v8 -e"
+    // 2. 根据你提供的源码和文档：
+    // - 使用 -p [pid] 注入特定进程
+    // - 使用 -s [script] 加载脚本
+    // - 使用 -R qjs 强制使用 QuickJS (文档说这是默认，但我们显式指定更稳)
+    // - 使用 -e (eternalize) 注入后脱离
+    // 注意：移除 --runtime=v8，那是导致 17.x 在 Android 10 上报错误 4 的元凶
     
-    log("[System] 执行原始指令: $command")
+    val command = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -R qjs -e"
+    
+    log("[System] 执行 17.x 指令: $command")
 
     val result = Shell.cmd(command).exec()
     
     if (result.isSuccess) {
-        log("[Success] 注入指令已发送 (12.8.2 模式)")
+        log("[Success] 17.9.1 注入指令已发送 (QuickJS 模式)")
     } else {
-        log("[Error] 注入失败，错误码: ${result.code}")
+        log("[Error] 17.9.1 注入失败，错误码: ${result.code}")
         
-        // 如果 12.8.2 也报错误 4，那 100% 是 SELinux 或 Magisk 挂载问题
+        // 如果 QuickJS 也报错误 4，尝试完全不带运行时参数
         if (result.code == 4) {
-            log("[Critical] 12.8.2 也返回错误 4！")
-            log("[Check] 请在终端输入 'getenforce' 确认是否为 Permissive")
-            log("[Check] 尝试手动执行: su -c 'setenforce 0'")
+            log("[System] 尝试不带运行时参数的最后方案...")
+            val lastResort = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -e"
+            val lastResult = Shell.cmd(lastResort).exec()
+            if (lastResult.isSuccess) {
+                log("[Success] 自动运行时模式注入成功")
+                return
+            }
+            log("[Error] 最终尝试也失败，错误码: ${lastResult.code}")
         }
     }
     
