@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anggrayudi.storage.file.DocumentFileCompat
-import com.anggrayudi.storage.file.extension.baseName
+import com.anggrayudi.storage.file.baseName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
