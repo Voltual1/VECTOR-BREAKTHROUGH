@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -153,27 +154,31 @@ fun HomeScreen(
         }
 
         // ---------- 日志区域 ----------
-        Text("运行日志", style = MaterialTheme.typography.titleMedium)
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(8.dp)
-        ) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(viewModel.logs) { log ->
-                    Text(
-                        text = log,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = 2.dp),
-                        color = if (log.contains("[Error]")) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+        // 日志区域
+Text("运行日志", style = MaterialTheme.typography.titleMedium)
+Box(
+    modifier = Modifier
+        .weight(1f)
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(8.dp))
+        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        .padding(8.dp)
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(viewModel.logs) { log ->
+            //  关键修改：用 SelectionContainer 包裹 Text
+            SelectionContainer {
+                Text(
+                    text = log,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 2.dp),
+                    color = if (log.contains("[Error]")) MaterialTheme.colorScheme.error 
+                           else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
+    }
+}
 
         TextButton(
             onClick = { viewModel.clearLogs() },
