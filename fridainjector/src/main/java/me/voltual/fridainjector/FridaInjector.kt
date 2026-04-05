@@ -129,7 +129,7 @@ class FridaInjector private constructor(builder: Builder) {
         // 如果 QuickJS 也报错误 4，尝试完全不带运行时参数
         if (result.code == 4) {
             log("[System] 尝试不带运行时参数的最后方案...")
-            val lastResort = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -e"
+            val lastResort = "cat /dev/null | ${injector.path} -p $pid -s $agentPath "
             val lastResult = Shell.cmd(lastResort).exec()
             if (lastResult.isSuccess) {
                 log("[Success] 自动运行时模式注入成功")
