@@ -37,7 +37,7 @@ android {
 dependencies {
     // 兼容低版本 Java 8 特性脱糖
     coreLibraryDesugaring(libs.android.desugar)
-     implementation("com.chrisplus.rootmanager:library:2.0.5@aar")
+     implementation("com.chrisplus.rootmanager:library:2.0.5")
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
