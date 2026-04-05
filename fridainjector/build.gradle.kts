@@ -32,16 +32,11 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlin {
-        jvmToolchain(17)
-    }
 }
 
 dependencies {
     // 兼容低版本 Java 8 特性脱糖
     coreLibraryDesugaring(libs.android.desugar)
-
-    implementation(libs.rootmanager)    
      implementation("com.chrisplus.rootmanager:library:2.0.5@aar")
 }
 
