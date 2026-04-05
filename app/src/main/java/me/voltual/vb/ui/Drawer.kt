@@ -91,7 +91,7 @@ fun NavigationDrawerItems(
       ),
               DrawerItem(
             "script_terminal", 
-            "脚本库 (Terminal)", 
+            "脚本库", 
             IconSource.Vector(Icons.Rounded.Terminal), 
             ScriptLibrary
         ),

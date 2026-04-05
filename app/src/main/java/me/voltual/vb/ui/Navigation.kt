@@ -22,5 +22,3 @@ sealed interface AppDestination : NavKey
 @Serializable data object ThemeCustomize : AppDestination
 
 @Serializable data object ScriptLibrary : AppDestination
-
-@Serializable data class ScriptEditor(val scriptId: Int? = null) : AppDestination

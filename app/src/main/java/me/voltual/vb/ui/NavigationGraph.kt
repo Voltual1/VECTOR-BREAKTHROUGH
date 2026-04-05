@@ -62,7 +62,7 @@ fun BBQNavDisplay(
     // 使用手动实现的 entryProvider 闭包
     entryProvider = { key ->
       when (key) {
-        is Home -> NavEntry(key) {  }
+        is Home -> NavEntry(key) { HomeScreen(modifier = Modifier.fillMaxSize()) }
 
         is ThemeCustomize ->
           NavEntry(key) { ThemeCustomizeScreen(modifier = Modifier.fillMaxSize()) }
