@@ -1,4 +1,4 @@
-package me.voltual.fridainjector
+package com.igio90.fridainjector
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -15,9 +15,10 @@ class FridaInjector private constructor(builder: Builder) {
 
     companion object {
         init {
+            // 移除已废弃的 FLAG_REDIRECT_STDERR
+            // 现在 libsu 默认会分别处理 stdout 和 stderr
             Shell.setDefaultBuilder(
                 Shell.Builder.create()
-                    .setFlags(Shell.FLAG_REDIRECT_STDERR)
                     .setTimeout(10)
             )
         }
@@ -59,8 +60,9 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun isProcessRunning(packageName: String): Boolean {
-        val out = Shell.cmd("pidof $packageName").exec().out
-        return out.isNotEmpty()
+        // 使用 pidof 检查进程，如果需要查看错误，可以调用 .exec().err
+        val result = Shell.cmd("pidof $packageName").exec()
+        return result.out.isNotEmpty()
     }
 
     fun inject(fridaAgent: FridaAgent, packageName: String, spawn: Boolean = false) {
@@ -132,6 +134,7 @@ class FridaInjector private constructor(builder: Builder) {
                     try {
                         Thread.sleep(250)
                         if (System.currentTimeMillis() - start > TimeUnit.SECONDS.toMillis(5)) {
+                            // 可以在此处通过 Shell.cmd(...).exec().err 记录错误日志
                             throw RuntimeException("wait timeout for process spawn")
                         }
                     } catch (e: InterruptedException) {
@@ -142,6 +145,7 @@ class FridaInjector private constructor(builder: Builder) {
             }
 
             launchIntent?.let {
+                it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(it)
             }
         } else {
@@ -150,6 +154,7 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun executeInjectCommand(packageName: String, agentPath: String) {
+        // 如果需要合并输出，可以在命令末尾添加 2>&1
         Shell.cmd("${injector.path} -n $packageName -s $agentPath --runtime=v8 -e").exec()
     }
 
