@@ -27,6 +27,8 @@ import kotlinx.serialization.json.Json
 import me.voltual.vb.data.UpdateInfo
 
 object KtorClient {
+  private const val MAX_RETRIES = 3
+  private const val RETRY_DELAY = 1000L
 
   val httpClient =
     HttpClient(OkHttp) {
@@ -96,4 +98,5 @@ object KtorClient {
   fun close() {
     httpClient.close()
   }
+}
 }

@@ -225,7 +225,7 @@ private fun ItemContent(
     onClick = {
     scope.launch { drawerState.close() }
     navigator.navigate(item.route)
-}
+},
     modifier =
       modifier.padding(vertical = 4.dp).graphicsLayer { alpha = if (isDragged) 0f else 1f },
     colors =

@@ -181,7 +181,7 @@ class MainActivity : ComponentActivity() {
     val currentRoute = navigationState.currentRoute
     val currentTopLevelRoute = navigationState.topLevelRoute
 
-    val showBackButton = remember(currentRoute) { currentRoute != Home && currentRoute != Login }
+    val showBackButton = remember(currentRoute) { currentRoute != Home }
 
     val useDarkTheme = ThemeManager.isAppDarkTheme
     val lightBgUri by
