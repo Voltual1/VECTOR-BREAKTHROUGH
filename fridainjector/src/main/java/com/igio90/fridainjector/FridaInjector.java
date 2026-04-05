@@ -6,22 +6,35 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
-import com.chrisplus.rootmanager.RootManager;
+import com.topjohnwu.superuser.Shell;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class FridaInjector {
     private final Context mContext;
-
     private final File mInjector;
+
+    // 静态块初始化 libsu 的配置（可选）
+    static {
+        Shell.setDefaultBuilder(Shell.Builder.create()
+            .setFlags(Shell.FLAG_REDIRECT_STDERR)
+            .setTimeout(10));
+    }
 
     private FridaInjector(FridaInjector.Builder builder) {
         mContext = builder.mContext;
         mInjector = builder.getInjector();
+    }
+
+    private boolean isProcessRunning(String packageName) {
+        // 使用 pidof 检查进程是否存在，这是最快的方式
+        List<String> out = Shell.cmd("pidof " + packageName).exec().getOut();
+        return !out.isEmpty();
     }
 
     public void inject(FridaAgent fridaAgent, String packageName, boolean spawn) {
@@ -29,7 +42,7 @@ public class FridaInjector {
             throw new RuntimeException("did you forget to call init()?");
         }
 
-        if (!RootManager.getInstance().isProcessRunning(packageName)) {
+        if (!isProcessRunning(packageName)) {
             spawn = true;
         }
 
@@ -41,19 +54,26 @@ public class FridaInjector {
                         fridaAgent.getPackageName(), 0);
                 String ownApk = ownAi.publicSourceDir;
                 ApplicationInfo targetAi = fridaAgent.getPackageManager().getApplicationInfo(packageName, 0);
-                String targetPath = new File(targetAi.publicSourceDir).getPath().substring(0,
-                        targetAi.publicSourceDir.lastIndexOf("/"));
+                
+                File targetApkFile = new File(targetAi.publicSourceDir);
+                String targetPath = targetApkFile.getParent();
+
+                // libsu 处理挂载和拷贝更加优雅
+                Shell.Job job = Shell.cmd();
                 if (targetPath.startsWith("/system/")) {
-                    RootManager.getInstance().remount("/system", "rw");
+                    job.add("mount -o remount,rw /system");
                 }
-                RootManager.getInstance().runCommand("cp " + ownApk + " " + targetPath + "/xd.apk");
-                RootManager.getInstance().runCommand("chmod 644 " + targetPath + "/xd.apk");
+                
+                job.add("cp " + ownApk + " " + targetPath + "/xd.apk");
+                job.add("chmod 644 " + targetPath + "/xd.apk");
+                
                 if (targetPath.startsWith("/system/")) {
-                    RootManager.getInstance().runCommand("chown root:root " + targetPath + "/xd.apk");
-                    RootManager.getInstance().remount("/system", "ro");
+                    job.add("chown root:root " + targetPath + "/xd.apk");
+                    job.add("mount -o remount,ro /system");
                 } else {
-                    RootManager.getInstance().runCommand("chown system:system " + targetPath + "/xd.apk");
+                    job.add("chown system:system " + targetPath + "/xd.apk");
                 }
+                job.exec();
 
                 agent.append(FridaAgent.sRegisterClassLoaderAgent);
 
@@ -83,43 +103,39 @@ public class FridaInjector {
 
         File fridaAgentFile = new File(fridaAgent.getFilesDir(), "wrapped_agent.js");
         Utils.writeToFile(fridaAgentFile, agent.toString());
-        RootManager.getInstance().runCommand("chmod 777 " + fridaAgentFile.getPath());
+        Shell.cmd("chmod 777 " + fridaAgentFile.getPath()).exec();
 
         if (spawn) {
             Intent launchIntent = mContext.getPackageManager().getLaunchIntentForPackage(packageName);
-            RootManager.getInstance().killProcessByName(packageName);
+            // 杀进程
+            Shell.cmd("am force-stop " + packageName).exec();
+            
             new Thread(() -> {
                 long start = System.currentTimeMillis();
-                while (!RootManager.getInstance().isProcessRunning(packageName)) {
+                while (!isProcessRunning(packageName)) {
                     try {
                         Thread.sleep(250);
-
-                        if (System.currentTimeMillis() - start >
-                                TimeUnit.SECONDS.toMillis(5)) {
+                        if (System.currentTimeMillis() - start > TimeUnit.SECONDS.toMillis(5)) {
                             throw new RuntimeException("wait timeout for process spawn");
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                inject(packageName, fridaAgentFile.getPath());
+                executeInjectCommand(packageName, fridaAgentFile.getPath());
             }).start();
 
             if (launchIntent != null) {
                 mContext.startActivity(launchIntent);
-            } else {
-                // are we targeting a system app?
-                // systemui does auto-respawn. Let's see further cases
-                // todo: handle cases here
             }
         } else {
-            inject(packageName, fridaAgentFile.getPath());
+            executeInjectCommand(packageName, fridaAgentFile.getPath());
         }
     }
 
-    private void inject(String packageName, String agentPath) {
-        RootManager.getInstance().runCommand(mInjector.getPath() + " -n " + packageName +
-                " -s " + agentPath + " --runtime=v8 -e");
+    private void executeInjectCommand(String packageName, String agentPath) {
+        Shell.cmd(mInjector.getPath() + " -n " + packageName +
+                " -s " + agentPath + " --runtime=v8 -e").exec();
     }
 
     public static class Builder {
@@ -128,17 +144,13 @@ public class FridaInjector {
         private String mArm64BinaryPath;
         private String mX86BinaryPath;
         private String mX86_64BinaryPath;
-
         private File mInjector;
 
         public Builder(Context context) {
-            if (!RootManager.getInstance().hasRooted()) {
-                throw new RuntimeException("must run on a rooted device");
+            // libsu 会在第一次调用 Shell.getShell() 时弹出授权申请
+            if (!Shell.getShell().isRoot()) {
+                throw new RuntimeException("failed to obtain root permissions or device not rooted");
             }
-            if (!RootManager.getInstance().obtainPermission()) {
-                throw new RuntimeException("failed to obtain root permissions");
-            }
-
             mContext = context;
         }
 
@@ -171,18 +183,10 @@ public class FridaInjector {
             String arch = getArch();
             String injectorName = null;
             switch (arch) {
-                case "arm":
-                    injectorName = mArmBinaryPath;
-                    break;
-                case "arm64":
-                    injectorName = mArm64BinaryPath;
-                    break;
-                case "x86":
-                    injectorName = mX86BinaryPath;
-                    break;
-                case "x86_64":
-                    injectorName = mX86_64BinaryPath;
-                    break;
+                case "arm": injectorName = mArmBinaryPath; break;
+                case "arm64": injectorName = mArm64BinaryPath; break;
+                case "x86": injectorName = mX86BinaryPath; break;
+                case "x86_64": injectorName = mX86_64BinaryPath; break;
             }
 
             if (injectorName == null) {
@@ -215,7 +219,7 @@ public class FridaInjector {
         }
 
         Utils.extractAsset(context, name, injector);
-        RootManager.getInstance().runCommand("chmod 777 " + injector.getPath());
+        Shell.cmd("chmod 777 " + injector.getPath()).exec();
         return injector;
     }
 
@@ -228,8 +232,6 @@ public class FridaInjector {
                 case "x86": return "x86";
             }
         }
-
-        throw new RuntimeException("Unable to determine arch from Build.SUPPORTED_ABIS =  " +
-                Arrays.toString(Build.SUPPORTED_ABIS));
+        throw new RuntimeException("Unable to determine arch");
     }
 }

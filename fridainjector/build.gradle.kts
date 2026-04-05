@@ -37,5 +37,5 @@ android {
 dependencies {
     // 兼容低版本 Java 8 特性脱糖
     coreLibraryDesugaring(libs.android.desugar)
-implementation("com.chrisplus.rootmanager:library:2.0.5")
+  implementation(libs.libsu.core)
 }
