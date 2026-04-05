@@ -7,6 +7,7 @@ import com.topjohnwu.superuser.Shell
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import android.content.Intent
 import kotlin.concurrent.thread
 
 class FridaInjector private constructor(builder: Builder) {
