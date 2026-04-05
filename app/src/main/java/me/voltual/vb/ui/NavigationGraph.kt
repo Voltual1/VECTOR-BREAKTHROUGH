@@ -25,6 +25,7 @@ import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.launch
 import me.voltual.vb.core.ui.animation.*
+import me.voltual.vb.ui.scripts.ScriptLibraryScreen
 import me.voltual.vb.core.ui.theme.ThemeCustomizeScreen
 import me.voltual.vb.ui.settings.update.UpdateSettingsScreen
 
