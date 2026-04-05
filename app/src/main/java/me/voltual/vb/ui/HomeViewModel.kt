@@ -79,58 +79,55 @@ class HomeViewModel(
     }
 
     fun performInjection() {
-        if (rootStatus != RootStatus.GRANTED) {
-            logs.add(0, "[Error] 请先授予 Root 权限")
-            checkRootPermission()
-            return
-        }
+    if (rootStatus != RootStatus.GRANTED) {
+        logs.add(0, "[Error] 请先授予 Root 权限")
+        checkRootPermission()
+        return
+    }
 
-        val script = selectedScript
-        val pkg = targetPackage
+    val script = selectedScript
+    val pkg = targetPackage
 
-        if (script == null || pkg.isBlank()) {
-            logs.add(0, "[Error] 请先选择脚本并输入包名")
-            return
-        }
+    if (script == null || pkg.isBlank()) {
+        logs.add(0, "[Error] 请先选择脚本并输入包名")
+        return
+    }
 
-        isInjecting = true
-        logs.add(0, "[System] 正在尝试注入: $pkg ...")
+    isInjecting = true
+    logs.add(0, "[System] 正在尝试注入: $pkg ...")
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-            if (!Shell.getShell().isRoot) {
-            withContext(Dispatchers.Main) {
-                logs.add(0, "[Error] Root 权限丢失，请重新授权")
-                rootStatus = RootStatus.DENIED
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val injector = FridaInjector.Builder(context)
+                .withArm64Injector("frida-inject-17.9.1-android-arm64")
+                .build()
+
+            // 关键：设置日志回调，将 frida-inject 的输出重定向到 UI
+            injector.loggingCallback = { msg ->
+                withContext(Dispatchers.Main) {
+                    logs.add(0, msg)
+                }
             }
-            return@launch
-        }
-                val injector = FridaInjector.Builder(context)
-                    .withArm64Injector("frida-inject-17.9.1-android-arm64")
-                    .build()
 
-                val agent = FridaAgent.Builder(context)
-                    .withAgentFromString(script.content)  // 确保字段名为 content
-                    .withOnMessage(this@HomeViewModel)
-                    .build()
+            val agent = FridaAgent.Builder(context)
+                .withAgentFromString(script.content)
+                .withOnMessage(this@HomeViewModel)
+                .build()
 
-                injector.inject(agent, pkg, spawn = true)
+            injector.inject(agent, pkg, spawn = true)
 
-                withContext(Dispatchers.Main) {
-                    logs.add(0, "[Success] 注入指令已发送")
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    logs.add(0, "[Error] 注入失败: ${e.message}")
-                }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                logs.add(0, "[Error] 注入失败: ${e.message}")
                 e.printStackTrace()
-            } finally {
-                withContext(Dispatchers.Main) {
-                    isInjecting = false
-                }
+            }
+        } finally {
+            withContext(Dispatchers.Main) {
+                isInjecting = false
             }
         }
     }
+}
 
     fun clearLogs() {
         logs.clear()

@@ -15,40 +15,67 @@ class FridaAgent private constructor(builder: Builder) {
 
     companion object {
         const val WRAPPER_JS = """
+            // 重写 console.log，通过 Android 日志输出
             console.log = function() {
                 var args = arguments;
-                Java.performNow(function() {
-                    for (var i=0; i<args.length; i++) {
-                        Java.use('android.util.Log').e('FridaAndroidInject', args[i].toString());
+                Java.perform(function() {
+                    try {
+                        var Log = Java.use('android.util.Log');
+                        for (var i=0; i<args.length; i++) {
+                            Log.e('FridaAndroidInject', String(args[i]));
+                        }
+                    } catch (e) {
+                        // 如果 Log 类不可用，回退到原生的 console.log
+                        console.log('Log error:', e);
                     }
                 });
             };
 
+            // 重写 Java.send，通过广播发送数据回宿主应用
             Java['send'] = function(data) {
-                Java.performNow(function () {
-                    var Intent = Java.use('android.content.Intent');
-                    var ActivityThread = Java.use('android.app.ActivityThread');
-                    var Context = Java.use('android.content.Context');
-                    var ctx = Java.cast(ActivityThread.currentApplication().getApplicationContext(), Context);
-                    var intent = Intent.${'$'}new('com.frida.injector.SEND');
-                    intent.putExtra('data', JSON.stringify(data));
-                    ctx.sendBroadcast(intent);
+                Java.perform(function () {
+                    try {
+                        var Intent = Java.use('android.content.Intent');
+                        var ActivityThread = Java.use('android.app.ActivityThread');
+                        var Context = Java.use('android.content.Context');
+                        
+                        var app = ActivityThread.currentApplication();
+                        if (app == null) {
+                            console.log('Application not ready yet, skipping send');
+                            return;
+                        }
+                        
+                        var ctx = Java.cast(app.getApplicationContext(), Context);
+                        var intent = Intent.${'$'}new('com.frida.injector.SEND');
+                        intent.putExtra('data', JSON.stringify(data));
+                        ctx.sendBroadcast(intent);
+                        console.log('Broadcast sent:', data);
+                    } catch (e) {
+                        console.log('Send failed: ' + e);
+                    }
                 });
             }
+            
+            console.log('Frida wrapper loaded. Script ready.');
         """
 
         const val REGISTER_CLASS_LOADER_JS = """
-            Java.performNow(function() {
-                var app = Java.use('android.app.ActivityThread').currentApplication();
-                var context = app.getApplicationContext();
-                var pm = context.getPackageManager();
-                var ai = pm.getApplicationInfo(context.getPackageName(), 0);
-                var apkPath = ai.publicSourceDir.value;
-                apkPath = apkPath.substring(0, apkPath.lastIndexOf('/')) + '/xd.apk';
-                var cl = Java.use('dalvik.system.DexClassLoader').${'$'}new(
-                        apkPath, context.getCacheDir().getAbsolutePath(), null,
-                        context.getClass().getClassLoader());
-                Java.classFactory['xd_loader'] = cl;
+            Java.perform(function() {
+                try {
+                    var app = Java.use('android.app.ActivityThread').currentApplication();
+                    var context = app.getApplicationContext();
+                    var pm = context.getPackageManager();
+                    var ai = pm.getApplicationInfo(context.getPackageName(), 0);
+                    var apkPath = ai.publicSourceDir.value;
+                    apkPath = apkPath.substring(0, apkPath.lastIndexOf('/')) + '/xd.apk';
+                    var cl = Java.use('dalvik.system.DexClassLoader').${'$'}new(
+                            apkPath, context.getCacheDir().getAbsolutePath(), null,
+                            context.getClass().getClassLoader());
+                    Java.classFactory['xd_loader'] = cl;
+                    console.log('Custom class loader registered');
+                } catch (e) {
+                    console.log('Class loader registration failed: ' + e);
+                }
             });
         """
     }
@@ -87,6 +114,7 @@ class FridaAgent private constructor(builder: Builder) {
             onMessage?.let {
                 val filter = IntentFilter("com.frida.injector.SEND")
                 // 注意：在 Android 14+ 中可能需要指定 RECEIVER_EXPORTED
+                // 但我们的广播是发送给自己应用的，所以不需要 exported
                 context.registerReceiver(DataBroadcast(it), filter)
             }
             return agent
