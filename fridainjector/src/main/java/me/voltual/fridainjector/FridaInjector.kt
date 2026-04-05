@@ -103,28 +103,36 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun executeInjectCommand(packageName: String, pid: String, agentPath: String) {
-        log("[System] 尝试连接 PID: $pid ...")
+    log("[System] 尝试连接 PID: $pid ...")
+    
+    // 1. 使用 'exec < /dev/null' 重定向标准输入，解决 tcgetattr failed: Invalid argument
+    // 2. 使用 '-e' (eternalize) 注入后立即退出注入器进程，保持脚本运行
+    // 3. 使用 '-R v8' 指定运行时 (根据源码 options 里的 'runtime')
+    // 4. 移除所有源码里不存在的参数 (--non-interactive 等)
+    
+    val command = "exec < /dev/null; ${injector.path} -p $pid -s $agentPath -R v8 -e"
+    
+    log("[System] 执行指令: $command")
+
+    // 使用 libsu 执行
+    val result = Shell.cmd(command).exec()
+    
+    if (result.isSuccess) {
+        log("[Success] 注入成功 (Eternalized)")
+    } else {
+        log("[Error] 注入失败，错误码: ${result.code}")
         
-        // 使用 PID (-p) 注入比包名 (-n) 更稳定
-        val command = "${injector.path} -p $pid -s $agentPath --runtime=v8"
-        
-        val result = Shell.cmd(command).exec()
-        
-        if (result.isSuccess) {
-            log("[Success] 注入完成!")
-        } else {
-            log("[Error] 注入失败，错误码: ${result.code}")
-            if (result.code == 4) {
-                log("[Tip] 错误码 4 通常是权限问题，请检查 Magisk 是否授予了完整 Root。")
-            }
-        }
-        
-        result.out.forEach { log("[frida-out] $it") }
+        // 打印详细错误方便调试
         result.err.forEach { log("[frida-err] $it") }
+        result.out.forEach { log("[frida-out] $it") }
         
-        // 注入完成后可以恢复 SELinux (可选)
-        // Shell.cmd("setenforce 1").exec()
+        if (result.code == 4) {
+            log("[Tip] 依然返回错误码 4？请检查：")
+            log("1. 目标进程 $packageName 是否在注入瞬间崩溃了？")
+            log("2. 尝试换成 -R qjs (QuickJS) 看看是否兼容性更好。")
+        }
     }
+}
     
     private fun log(msg: String) {
         loggingCallback?.invoke(msg)
