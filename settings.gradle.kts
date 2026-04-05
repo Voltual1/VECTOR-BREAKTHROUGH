@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vector-Breakthrough"
 include(":fridainjector")
+include(":app")
