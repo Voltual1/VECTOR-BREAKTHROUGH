@@ -103,35 +103,32 @@ class FridaInjector private constructor(builder: Builder) {
     }
 
     private fun executeInjectCommand(packageName: String, pid: String, agentPath: String) {
-    log("[System] 正在使用 17.9.1 优化指令注入...")
-
-    // 1. 确保 SELinux 是关闭的
-    Shell.cmd("setenforce 0").exec()
-
-    // 2. 构造 17.9.1 最稳健的指令：
-    // -p: 使用 PID 注入
-    // -s: 脚本路径
-    // -R qjs: 强制使用 QuickJS (解决 V8 在 Android 10 上的分配失败问题)
-    // -e: 注入后脱离
-    val command = "cat /dev/null | ${injector.path} -p $pid -s $agentPath -R qjs -e"
+    log("[System] 执行 17.9.1 最终版注入指令...")
     
-    log("[System] 执行 17.9.1 指令: $command")
-
+    // 1. 确保 SELinux 关闭
+    Shell.cmd("setenforce 0").exec()
+    
+    // 2. 使用验证成功的命令格式
+    val command = "cat /dev/null | ${injector.path} --pid $pid --script $agentPath --runtime=qjs"
+    
+    log("[System] 指令: $command")
+    
     val result = Shell.cmd(command).exec()
     
     if (result.isSuccess) {
-        log("[Success] 17.9.1 注入成功 (QuickJS)")
+        log("[Success] 注入成功！脚本已加载 (QuickJS)")
     } else {
-        log("[Error] 17.9.1 注入失败，错误码: ${result.code}")
+        log("[Error] 注入失败，错误码: ${result.code}")
+        result.err.forEach { log("[frida-err] $it") }
+        result.out.forEach { log("[frida-out] $it") }
         
-        // 打印详细的错误描述，这对解决 Error 4 至关重要
-        if (result.err.isNotEmpty()) {
-            log("[frida-err-detail] 具体的错误原因:")
-            result.err.forEach { log(" >> $it") }
+        if (result.code == 4) {
+            log("[Critical] 错误码 4 重现！请检查：")
+            log("1. SELinux 状态: 执行 'getenforce' 应为 Permissive")
+            log("2. 文件权限: /data/local/tmp/wrapped_agent.js 是否可读?")
+            log("3. 尝试手动执行上述命令查看完整错误")
         }
     }
-    
-    result.out.forEach { log("[frida-out] $it") }
 }
     
     private fun log(msg: String) {
