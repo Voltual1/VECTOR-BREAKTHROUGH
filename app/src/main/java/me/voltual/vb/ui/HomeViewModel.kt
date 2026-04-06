@@ -74,65 +74,7 @@ class HomeViewModel(
         data?.let {
             logs.add(0, "[Frida] $it")
         }
-    }
-
-    fun performInjection() {
-        if (rootStatus != RootStatus.GRANTED) {
-            logs.add(0, "[Error] 请先授予 Root 权限")
-            checkRootPermission()
-            return
-        }
-
-        val script = selectedScript
-        val pkg = targetPackage
-
-        if (script == null || pkg.isBlank()) {
-            logs.add(0, "[Error] 请先选择脚本并输入包名")
-            return
-        }
-
-        isInjecting = true
-        logs.add(0, "[System] 正在尝试注入: $pkg ...")
-    
-    viewModelScope.launch(Dispatchers.IO) {
-        try {
-            val injector = FridaInjector.Builder(context)
-                .withArm64Injector("frida-inject-17.9.1-android-arm64")
-                .build()
-            
-            val agent = FridaAgent.Builder(context)
-                .withAgentFromString(script.content)
-                .withOnMessage(this@HomeViewModel)
-                .build()
-            
-            injector.injectWithTerminalSession(
-                fridaAgent = agent,
-                packageName = pkg,
-                spawn = true,
-                onOutput = { msg ->
-                    viewModelScope.launch(Dispatchers.Main) {
-                        logs.add(0, "[frida-out] $msg")
-                    }
-                },
-                onError = { msg ->
-                    viewModelScope.launch(Dispatchers.Main) {
-                        logs.add(0, "[frida-err] $msg")
-                    }
-                },
-                onComplete = {
-                    viewModelScope.launch(Dispatchers.Main) {
-                        isInjecting = false
-                    }
-                }
-            )
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                logs.add(0, "[Error] ${e.message}")
-                isInjecting = false
-            }
-        }
-    }
-}
+    }    
 
     fun clearLogs() {
         logs.clear()

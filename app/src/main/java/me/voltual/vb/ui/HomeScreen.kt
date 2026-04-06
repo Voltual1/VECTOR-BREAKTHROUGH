@@ -137,47 +137,38 @@ fun HomeScreen(
 
         // ---------- 注入按钮 ----------
         Button(
-            onClick = { viewModel.performInjection() },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !viewModel.isInjecting &&
-                    viewModel.selectedScript != null &&
-                    viewModel.rootStatus == RootStatus.GRANTED,
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            if (viewModel.isInjecting) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-            } else {
-                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("开始注入")
-            }
-        }
+    onClick = {
+        terminalSession?.write(
+            "${injectorPath} -p $pid -s $agentPath -R qjs\n"
+        )
+    }
+) {
+    Text("在终端中执行注入")
+}
+
 
         // ---------- 日志区域 ----------
         // 日志区域
 Text("运行日志", style = MaterialTheme.typography.titleMedium)
+
+var terminalSession by remember { mutableStateOf<TerminalSession?>(null) }
+
+// 终端区域
 Box(
     modifier = Modifier
         .weight(1f)
         .fillMaxWidth()
         .clip(RoundedCornerShape(8.dp))
-        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-        .padding(8.dp)
+        .background(MaterialTheme.colorScheme.surfaceVariant)
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(viewModel.logs) { log ->
-            //  关键修改：用 SelectionContainer 包裹 Text
-            SelectionContainer {
-                Text(
-                    text = log,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(vertical = 2.dp),
-                    color = if (log.contains("[Error]")) MaterialTheme.colorScheme.error 
-                           else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+    TerminalViewAndroidView(
+        modifier = Modifier.fillMaxSize(),
+        onSessionCreated = { session ->
+            terminalSession = session
+            // 可选：自动执行 frida-inject 命令
+            // session.write("your command here\n")
         }
-    }
+    )
 }
 
         TextButton(
