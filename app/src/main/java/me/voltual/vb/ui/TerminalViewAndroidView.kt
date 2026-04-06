@@ -20,7 +20,7 @@ fun TerminalViewAndroidView(
         factory = { ctx ->
             TerminalView(ctx, null).apply {
                 // 记录当前字体大小（单位：sp）
-                var currentTextSize = 16
+                var currentTextSize = 48
 
                 // 设置初始字体大小
                 setTextSize(currentTextSize)
@@ -91,7 +91,7 @@ fun TerminalViewAndroidView(
                 })
 
                 val session = TerminalSession(
-                    "/system/bin/sh",
+                    "/system/bin/su",
                     "/data/local/tmp",
                     arrayOf("sh"),
                     arrayOf("TERM=xterm-256color"),
