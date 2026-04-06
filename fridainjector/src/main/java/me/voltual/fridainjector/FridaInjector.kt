@@ -198,7 +198,6 @@ class FridaInjector private constructor(builder: Builder) {
         }
     }
 
-// 修改 executeInjectWithTerminalSession 方法
 private fun executeInjectWithTerminalSession(
     packageName: String,
     pid: String,
