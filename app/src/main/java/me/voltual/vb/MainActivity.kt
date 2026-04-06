@@ -345,6 +345,7 @@ fun getTitleForDestination(route: NavKey?): String {
   return when (route) {
     Home -> "主页"
     ThemeCustomize -> "主题定制"
+    ScriptLibrary -> "脚本库"
     UpdateSettings -> "更新设置"
     else -> "在~ $route ~里~哦"
   }
