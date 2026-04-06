@@ -20,7 +20,7 @@ fun TerminalViewAndroidView(
         factory = { ctx ->
             TerminalView(ctx, null).apply {
                 // 必须设置文本大小，否则 mRenderer 为 null 导致崩溃
-                setTextSize(128)
+                setTextSize(48)
 
                 setTerminalViewClient(object : TerminalViewClient {
                     override fun onScale(scale: Float) = 1f
