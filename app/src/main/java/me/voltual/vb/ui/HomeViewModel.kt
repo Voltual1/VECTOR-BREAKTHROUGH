@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.termux.terminal.TerminalSession
 import me.voltual.fridainjector.FridaAgent
 import me.voltual.fridainjector.FridaInjector
 import me.voltual.fridainjector.OnMessage
