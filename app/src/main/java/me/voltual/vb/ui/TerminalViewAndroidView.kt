@@ -1,9 +1,9 @@
 package me.voltual.vb.ui
 
 import android.content.Context
-import android.view.View
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.termux.terminal.TerminalSession
@@ -19,9 +19,7 @@ fun TerminalViewAndroidView(
     AndroidView(
         factory = { ctx ->
             TerminalView(ctx, null).apply {
-                // 设置客户端（可选）
                 setTerminalViewClient(object : TerminalViewClient {
-                    // 实现必要的方法，大部分可以返回默认值或 false
                     override fun onScale(scale: Float) = 1f
                     override fun onSingleTapUp(e: MotionEvent) = Unit
                     override fun shouldBackButtonBeMappedToEscape() = false
@@ -49,15 +47,13 @@ fun TerminalViewAndroidView(
             }
         },
         update = { terminalView ->
-            // 如果 session 还没创建，可以在这里创建并附加
             if (terminalView.mTermSession == null) {
-                // 创建终端会话（执行 shell）
                 val session = TerminalSession(
-                    "/system/bin/sh",  // shell 路径
-                    "/data/local/tmp", // 工作目录
-                    arrayOf("sh"),     // 参数
-                    arrayOf("TERM=xterm-256color"), // 环境变量
-                    1000,              // 历史行数
+                    "/system/bin/sh",
+                    "/data/local/tmp",
+                    arrayOf("sh"),
+                    arrayOf("TERM=xterm-256color"),
+                    1000,
                     object : TerminalSessionClient {
                         override fun onTextChanged(session: TerminalSession) = Unit
                         override fun onTitleChanged(session: TerminalSession) = Unit

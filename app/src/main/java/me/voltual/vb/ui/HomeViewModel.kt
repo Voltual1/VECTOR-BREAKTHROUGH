@@ -49,6 +49,26 @@ class HomeViewModel(
     init {
         checkRootPermission()
     }
+    
+    private var terminalSession: TerminalSession? = null
+
+fun setTerminalSession(session: TerminalSession) {
+    terminalSession = session
+}
+
+fun performInjectionInTerminal(session: TerminalSession) {
+    val script = selectedScript
+    val pkg = targetPackage
+    if (script == null || pkg.isBlank()) {
+        // 可以显示错误提示（通过 Snackbar）
+        return
+    }
+    // 构建注入命令（与之前 inject 方法中的类似）
+    val injectorPath = "/data/user/0/${context.packageName}/files/injector/frida-inject-17.9.1-android-arm64"
+    val agentPath = "/data/local/tmp/wrapped_agent.js"
+    val command = "$injectorPath -n $pkg -s $agentPath --runtime=qjs -e\n"
+    session.write(command)
+}
 
     fun checkRootPermission() {
         viewModelScope.launch {

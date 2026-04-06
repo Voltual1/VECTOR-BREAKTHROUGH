@@ -3,19 +3,16 @@ package me.voltual.vb.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.termux.terminal.TerminalSession
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,6 +23,7 @@ fun HomeScreen(
 ) {
     val scripts by viewModel.allScripts.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
+    var terminalSession by remember { mutableStateOf<TerminalSession?>(null) }
 
     Column(
         modifier = modifier
@@ -137,45 +135,39 @@ fun HomeScreen(
 
         // ---------- 注入按钮 ----------
         Button(
-    onClick = {
-        terminalSession?.write(
-            "${injectorPath} -p $pid -s $agentPath -R qjs\n"
-        )
-    }
-) {
-    Text("在终端中执行注入")
-}
-
-
-        // ---------- 日志区域 ----------
-        // 日志区域
-Text("运行日志", style = MaterialTheme.typography.titleMedium)
-
-var terminalSession by remember { mutableStateOf<TerminalSession?>(null) }
-
-// 终端区域
-Box(
-    modifier = Modifier
-        .weight(1f)
-        .fillMaxWidth()
-        .clip(RoundedCornerShape(8.dp))
-        .background(MaterialTheme.colorScheme.surfaceVariant)
-) {
-    TerminalViewAndroidView(
-        modifier = Modifier.fillMaxSize(),
-        onSessionCreated = { session ->
-            terminalSession = session
-            // 可选：自动执行 frida-inject 命令
-            // session.write("your command here\n")
-        }
-    )
-}
-
-        TextButton(
-            onClick = { viewModel.clearLogs() },
-            modifier = Modifier.align(Alignment.End)
+            onClick = {
+                // 将注入命令写入终端
+                terminalSession?.let { session ->
+                    val scriptFile = viewModel.selectedScript?.let { script ->
+                        // 这里需要生成注入命令，可以复用 ViewModel 中的逻辑
+                        // 为了简洁，我们调用 ViewModel 的注入方法，但改为通过终端执行
+                        viewModel.performInjectionInTerminal(session)
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = viewModel.rootStatus == RootStatus.GRANTED && viewModel.selectedScript != null && viewModel.targetPackage.isNotBlank()
         ) {
-            Text("清空日志")
+            Text("执行注入（在终端中）")
+        }
+
+        // ---------- 终端区域 ----------
+        Text("终端输出", style = MaterialTheme.typography.titleMedium)
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            TerminalViewAndroidView(
+                modifier = Modifier.fillMaxSize(),
+                onSessionCreated = { session ->
+                    terminalSession = session
+                    viewModel.setTerminalSession(session)
+                }
+            )
         }
     }
 }
