@@ -9,6 +9,8 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
+import android.os.Handler
+import android.os.Looper
 
 class FridaInjector private constructor(builder: Builder) {
     private val context: Context = builder.context
@@ -196,35 +198,40 @@ class FridaInjector private constructor(builder: Builder) {
         }
     }
 
-    private fun executeInjectWithTerminalSession(
-        packageName: String,
-        pid: String,
-        agentPath: String,
-        onOutput: (String) -> Unit,
-        onError: (String) -> Unit,
-        onComplete: () -> Unit
-    ) {
-        val command = "${injector.path} -p $pid -s $agentPath -R qjs"
-        onOutput("[System] 使用 PTY 终端执行: $command")
-        
-        val terminalSession = FridaTerminalSession(
-            context = context,
-            command = command,
-            args = emptyArray(),
-            onOutput = { line ->
-                val cleanLine = line.replace(Regex("\\u001B\\[[;\\d]*[A-Za-z]"), "")
-                if (cleanLine.isNotBlank()) onOutput(cleanLine)
-            },
-            onError = onError,
-            onExit = { exitCode ->
-                if (exitCode == 0) {
-                    onOutput("[Success] 注入完成")
-                } else {
-                    onError("[Error] 注入失败，退出码: $exitCode")
-                }
-                onComplete()
+// 修改 executeInjectWithTerminalSession 方法
+private fun executeInjectWithTerminalSession(
+    packageName: String,
+    pid: String,
+    agentPath: String,
+    onOutput: (String) -> Unit,
+    onError: (String) -> Unit,
+    onComplete: () -> Unit
+) {
+    val command = "${injector.path} -p $pid -s $agentPath -R qjs"
+    onOutput("[System] 使用 PTY 终端执行: $command")
+    
+    val terminalSession = FridaTerminalSession(
+        context = context,
+        command = command,
+        args = emptyArray(),
+        onOutput = { line ->
+            val cleanLine = line.replace(Regex("\\u001B\\[[;\\d]*[A-Za-z]"), "")
+            if (cleanLine.isNotBlank()) onOutput(cleanLine)
+        },
+        onError = onError,
+        onExit = { exitCode ->
+            if (exitCode == 0) {
+                onOutput("[Success] 注入完成")
+            } else {
+                onError("[Error] 注入失败，退出码: $exitCode")
             }
-        )
+            onComplete()
+        }
+    )
+    
+    // 必须在主线程创建 TerminalSession（因为它内部创建了 Handler）
+    Handler(Looper.getMainLooper()).post {
         terminalSession.start()
     }
+}
 }
