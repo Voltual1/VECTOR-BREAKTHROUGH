@@ -2,17 +2,12 @@ apply plugin: 'com.android.library'
 
 android {
     namespace "com.termux.view"
-    compileSdkVersion project.properties.compileSdkVersion.toInteger()
-
-    dependencies {
-        implementation "androidx.annotation:annotation:1.9.0"
-        api project(":terminal-emulator")
-    }
+    compileSdkVersion 36
 
     defaultConfig {
-        minSdkVersion project.properties.minSdkVersion.toInteger()
-        targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        minSdkVersion 24
+        targetSdkVersion 36
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -23,24 +18,14 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-    publishing {
-        multipleVariants {
-            withSourcesJar()
-            withJavadocJar()
-            allVariants()
-        }
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
+    implementation "androidx.annotation:annotation:1.9.0"
+    // 依赖同项目的 emulator 模块
+    api project(":terminal-emulator")
     testImplementation "junit:junit:4.13.2"
-}
-
-task sourceJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    archiveClassifier = "sources"
 }
