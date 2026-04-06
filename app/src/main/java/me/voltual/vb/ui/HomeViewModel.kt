@@ -60,15 +60,19 @@ fun setTerminalSession(session: TerminalSession) {
 fun performInjectionInTerminal(session: TerminalSession) {
     val script = selectedScript
     val pkg = targetPackage
-    if (script == null || pkg.isBlank()) {
-        // 可以显示错误提示（通过 Snackbar）
-        return
-    }
-    // 构建注入命令（与之前 inject 方法中的类似）
-    val injectorPath = "/data/user/0/${context.packageName}/files/injector/frida-inject-17.9.1-android-arm64"
-    val agentPath = "/data/local/tmp/wrapped_agent.js"
-    val command = "$injectorPath -n $pkg -s $agentPath --runtime=qjs -e\n"
-    session.write(command)
+    if (script == null || pkg.isBlank()) return
+    
+    // 先确保 SELinux 是 Permissive 模式
+    session.write("su -c 'setenforce 0'\n")
+    
+    // 等待 500ms 让 su 执行完成
+    Handler(Looper.getMainLooper()).postDelayed({
+        val injectorPath = "/data/user/0/${context.packageName}/files/injector/frida-inject-17.9.1-android-arm64"
+        val agentPath = "/data/local/tmp/wrapped_agent.js"
+        
+        val command = "su -c \"$injectorPath -n $pkg -s $agentPath --runtime=qjs -e\"\n"
+        session.write(command)
+    }, 500)
 }
 
     fun checkRootPermission() {
