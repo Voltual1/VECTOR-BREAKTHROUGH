@@ -105,7 +105,6 @@ class HomeViewModel(
                 .withOnMessage(this@HomeViewModel)
                 .build()
             
-            // 使用新的 PTY 注入方法
             injector.injectWithTerminalSession(
                 fridaAgent = agent,
                 packageName = pkg,
