@@ -3,10 +3,9 @@ package me.voltual.fridainjector
 import android.content.Context
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
-import java.io.File
 
 class FridaTerminalSession(
-    context: Context,
+    private val context: Context,
     private val command: String,
     private val args: Array<String>,
     private val onOutput: (String) -> Unit,
@@ -20,8 +19,8 @@ class FridaTerminalSession(
         val fullCommand = arrayOf("sh", "-c", "$command ${args.joinToString(" ")}")
         val cwd = context.filesDir.absolutePath
         val env = arrayOf("TERM=xterm-256color")
-        
-        // 注意：TerminalSession 是 Java 类，不能使用命名参数，必须按顺序传参
+
+        // TerminalSession 是 Java 类，必须按参数顺序传递
         session = TerminalSession(
             "/system/bin/sh",   // shellPath
             cwd,                // cwd
@@ -30,7 +29,7 @@ class FridaTerminalSession(
             100,                // transcriptRows
             this                // client
         )
-        
+
         session?.updateSize(columns, rows, 10, 20)
     }
 
@@ -46,9 +45,9 @@ class FridaTerminalSession(
         session?.finishIfRunning()
     }
 
-    // ---------- TerminalSessionClient 回调 ----------
+    // ---------- TerminalSessionClient 回调实现 ----------
     override fun onTextChanged(session: TerminalSession) {
-        // 输出在 onCopyTextToClipboard 中处理
+        // 输出由 onCopyTextToClipboard 处理
     }
 
     override fun onTitleChanged(session: TerminalSession) {}
@@ -73,14 +72,30 @@ class FridaTerminalSession(
 
     override fun getTerminalCursorStyle(): Int? = null
 
-    override fun logError(tag: String, message: String) { onError("[Error] $message") }
-    override fun logWarn(tag: String, message: String) { onError("[Warn] $message") }
-    override fun logInfo(tag: String, message: String) { onOutput("[Info] $message") }
-    override fun logDebug(tag: String, message: String) { onOutput("[Debug] $message") }
-    override fun logVerbose(tag: String, message: String) { onOutput("[Verbose] $message") }
+    override fun logError(tag: String, message: String) {
+        onError("[Error] $message")
+    }
+
+    override fun logWarn(tag: String, message: String) {
+        onError("[Warn] $message")
+    }
+
+    override fun logInfo(tag: String, message: String) {
+        onOutput("[Info] $message")
+    }
+
+    override fun logDebug(tag: String, message: String) {
+        onOutput("[Debug] $message")
+    }
+
+    override fun logVerbose(tag: String, message: String) {
+        onOutput("[Verbose] $message")
+    }
+
     override fun logStackTraceWithMessage(tag: String, message: String, e: Exception) {
         onError("[$tag] $message: ${e.message}")
     }
+
     override fun logStackTrace(tag: String, e: Exception) {
         onError("[$tag] ${e.message}")
     }
