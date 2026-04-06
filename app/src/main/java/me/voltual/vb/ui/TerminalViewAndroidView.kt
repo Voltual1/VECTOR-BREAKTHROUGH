@@ -19,43 +19,42 @@ fun TerminalViewAndroidView(
     AndroidView(
         factory = { ctx ->
             TerminalView(ctx, null).apply {
-                // 必须设置文本大小，否则 mRenderer 为 null 导致崩溃
-                setTextSize(16)
-                
-                // 启用文本选择（长按选择文本）
-                // TerminalView 默认支持长按选择，不需要额外设置
-                
-                // 设置客户端
+                // 记录当前字体大小（单位：sp）
+                var currentTextSize = 16
+
+                // 设置初始字体大小
+                setTextSize(currentTextSize)
+
                 setTerminalViewClient(object : TerminalViewClient {
                     override fun onScale(scale: Float): Float {
-                        // 允许双指缩放，计算新字体大小
-                        val newTextSize = (textSize * scale).coerceIn(8f, 48f)
-                        setTextSize(newTextSize.toInt())
+                        // 计算新字体大小，限制在 8-48 sp 之间
+                        val newSize = (currentTextSize * scale).toInt().coerceIn(8, 48)
+                        if (newSize != currentTextSize) {
+                            currentTextSize = newSize
+                            setTextSize(currentTextSize)
+                        }
                         return scale
                     }
-                    
+
                     override fun onSingleTapUp(e: MotionEvent) {
-                        // 单点触控：取消文本选择模式（如果有的话）
+                        // 单点触控：如果处于文本选择模式，则退出选择模式
                         if (isSelectingText) {
                             stopTextSelectionMode()
                         }
                     }
-                    
+
                     override fun shouldBackButtonBeMappedToEscape() = false
                     override fun shouldEnforceCharBasedInput() = false
                     override fun shouldUseCtrlSpaceWorkaround() = false
                     override fun isTerminalViewSelected() = true
                     override fun copyModeChanged(copyMode: Boolean) = Unit
-                    
+
                     override fun onKeyDown(keyCode: Int, e: KeyEvent, session: TerminalSession): Boolean {
-                        // 处理复制粘贴快捷键（Ctrl+Shift+C 和 Ctrl+Shift+V）
+                        // 支持 Ctrl+Shift+C 复制，Ctrl+Shift+V 粘贴
                         if (e.isCtrlPressed && e.isShiftPressed) {
                             when (keyCode) {
                                 KeyEvent.KEYCODE_C -> {
-                                    val selectedText = getSelectedText()
-                                    if (!selectedText.isNullOrEmpty()) {
-                                        copyTextToClipboard(selectedText)
-                                    }
+                                    getSelectedText()?.let { copyTextToClipboard(it) }
                                     return true
                                 }
                                 KeyEvent.KEYCODE_V -> {
@@ -66,21 +65,22 @@ fun TerminalViewAndroidView(
                         }
                         return false
                     }
-                    
+
                     override fun onKeyUp(keyCode: Int, e: KeyEvent) = false
+
                     override fun onLongPress(event: MotionEvent): Boolean {
-                        // 长按：启动文本选择模式
+                        // 长按启动文本选择模式
                         startTextSelectionMode(event)
                         return true
                     }
-                    
+
                     override fun readControlKey() = false
                     override fun readAltKey() = false
                     override fun readShiftKey() = false
                     override fun readFnKey() = false
                     override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: TerminalSession) = false
                     override fun onEmulatorSet() = Unit
-                    
+
                     override fun logError(tag: String, message: String) = Unit
                     override fun logWarn(tag: String, message: String) = Unit
                     override fun logInfo(tag: String, message: String) = Unit
@@ -101,7 +101,6 @@ fun TerminalViewAndroidView(
                         override fun onTitleChanged(session: TerminalSession) = Unit
                         override fun onSessionFinished(session: TerminalSession) = Unit
                         override fun onCopyTextToClipboard(session: TerminalSession, text: String) {
-                            // 将文本复制到系统剪贴板
                             copyTextToClipboard(text)
                         }
                         override fun onPasteTextFromClipboard(session: TerminalSession?) {
@@ -129,14 +128,14 @@ fun TerminalViewAndroidView(
     )
 }
 
-// 扩展函数：复制文本到剪贴板
+// 复制文本到剪贴板
 private fun TerminalView.copyTextToClipboard(text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     val clip = android.content.ClipData.newPlainText("Terminal Selection", text)
     clipboard.setPrimaryClip(clip)
 }
 
-// 扩展函数：从剪贴板粘贴文本
+// 从剪贴板粘贴文本
 private fun TerminalView.pasteTextFromClipboard() {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     val clip = clipboard.primaryClip
