@@ -214,7 +214,7 @@ class MainActivity : ComponentActivity() {
           }
         }
       },
-      gesturesEnabled = true,
+      gesturesEnabled = currentRoute != Home,  // 仅在非Home页面启用手势
       modifier = Modifier.fillMaxSize(),
     ) {
       Scaffold(

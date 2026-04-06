@@ -3,8 +3,6 @@ package me.voltual.vb.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -15,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.termux.terminal.TerminalSession
-import me.voltual.vb.ui.scripts.ScriptLibraryScreen
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,28 +21,12 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel()
 ) {
-    val pagerState = rememberPagerState(pageCount = { 2 })
-
-    HorizontalPager(
-        state = pagerState,
-        modifier = modifier.fillMaxSize()
-    ) { page ->
-        when (page) {
-            0 -> InjectorTerminalContent(viewModel)
-            1 -> ScriptLibraryScreen()
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun InjectorTerminalContent(viewModel: HomeViewModel) {
     val scripts by viewModel.allScripts.collectAsState()
     var menuExpanded by remember { mutableStateOf(false) }
     var terminalSession by remember { mutableStateOf<TerminalSession?>(null) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -155,8 +136,13 @@ private fun InjectorTerminalContent(viewModel: HomeViewModel) {
         // ---------- 注入按钮 ----------
         Button(
             onClick = {
+                // 将注入命令写入终端
                 terminalSession?.let { session ->
-                    viewModel.performInjectionInTerminal(session)
+                    val scriptFile = viewModel.selectedScript?.let { script ->
+                        // 这里需要生成注入命令，可以复用 ViewModel 中的逻辑
+                        // 为了简洁，我们调用 ViewModel 的注入方法，但改为通过终端执行
+                        viewModel.performInjectionInTerminal(session)
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth(),
