@@ -3,6 +3,7 @@ package me.voltual.vb.ui
 import android.content.Context
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ViewTreeObserver
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -19,6 +20,7 @@ fun TerminalViewAndroidView(
     AndroidView(
         factory = { ctx ->
             TerminalView(ctx, null).apply {
+                // 设置 TerminalViewClient（必须在 attachSession 之前）
                 setTerminalViewClient(object : TerminalViewClient {
                     override fun onScale(scale: Float) = 1f
                     override fun onSingleTapUp(e: MotionEvent) = Unit
@@ -44,38 +46,46 @@ fun TerminalViewAndroidView(
                     override fun logStackTraceWithMessage(tag: String, message: String, e: Exception) = Unit
                     override fun logStackTrace(tag: String, e: Exception) = Unit
                 })
-            }
-        },
-        update = { terminalView ->
-            if (terminalView.mTermSession == null) {
-                val session = TerminalSession(
-                    "/system/bin/sh",
-                    "/data/local/tmp",
-                    arrayOf("sh"),
-                    arrayOf("TERM=xterm-256color"),
-                    1000,
-                    object : TerminalSessionClient {
-                        override fun onTextChanged(session: TerminalSession) = Unit
-                        override fun onTitleChanged(session: TerminalSession) = Unit
-                        override fun onSessionFinished(session: TerminalSession) = Unit
-                        override fun onCopyTextToClipboard(session: TerminalSession, text: String) = Unit
-                        override fun onPasteTextFromClipboard(session: TerminalSession?) = Unit
-                        override fun onBell(session: TerminalSession) = Unit
-                        override fun onColorsChanged(session: TerminalSession) = Unit
-                        override fun onTerminalCursorStateChange(state: Boolean) = Unit
-                        override fun setTerminalShellPid(session: TerminalSession, pid: Int) = Unit
-                        override fun getTerminalCursorStyle(): Int? = null
-                        override fun logError(tag: String, message: String) = Unit
-                        override fun logWarn(tag: String, message: String) = Unit
-                        override fun logInfo(tag: String, message: String) = Unit
-                        override fun logDebug(tag: String, message: String) = Unit
-                        override fun logVerbose(tag: String, message: String) = Unit
-                        override fun logStackTraceWithMessage(tag: String, message: String, e: Exception) = Unit
-                        override fun logStackTrace(tag: String, e: Exception) = Unit
+                
+                // 等待首次布局完成后再创建 TerminalSession
+                viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                    override fun onGlobalLayout() {
+                        // 移除监听器，避免重复调用
+                        viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        
+                        // 现在 TerminalView 已经完成布局，mRenderer 已初始化
+                        if (mTermSession == null) {
+                            val session = TerminalSession(
+                                "/system/bin/sh",
+                                "/data/local/tmp",
+                                arrayOf("sh"),
+                                arrayOf("TERM=xterm-256color"),
+                                1000,
+                                object : TerminalSessionClient {
+                                    override fun onTextChanged(session: TerminalSession) = Unit
+                                    override fun onTitleChanged(session: TerminalSession) = Unit
+                                    override fun onSessionFinished(session: TerminalSession) = Unit
+                                    override fun onCopyTextToClipboard(session: TerminalSession, text: String) = Unit
+                                    override fun onPasteTextFromClipboard(session: TerminalSession?) = Unit
+                                    override fun onBell(session: TerminalSession) = Unit
+                                    override fun onColorsChanged(session: TerminalSession) = Unit
+                                    override fun onTerminalCursorStateChange(state: Boolean) = Unit
+                                    override fun setTerminalShellPid(session: TerminalSession, pid: Int) = Unit
+                                    override fun getTerminalCursorStyle(): Int? = null
+                                    override fun logError(tag: String, message: String) = Unit
+                                    override fun logWarn(tag: String, message: String) = Unit
+                                    override fun logInfo(tag: String, message: String) = Unit
+                                    override fun logDebug(tag: String, message: String) = Unit
+                                    override fun logVerbose(tag: String, message: String) = Unit
+                                    override fun logStackTraceWithMessage(tag: String, message: String, e: Exception) = Unit
+                                    override fun logStackTrace(tag: String, e: Exception) = Unit
+                                }
+                            )
+                            attachSession(session)
+                            onSessionCreated(session)
+                        }
                     }
-                )
-                terminalView.attachSession(session)
-                onSessionCreated(session)
+                })
             }
         },
         modifier = modifier
