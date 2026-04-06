@@ -61,7 +61,6 @@ object KtorClient {
   // ===== API 接口定义 =====
 
   interface ApiService {
-    // 兼容 UpdateChecker.kt
     suspend fun getLatestRelease(url: String): Result<UpdateInfo>
     
   }
