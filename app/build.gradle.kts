@@ -181,6 +181,8 @@ dependencies {
   implementation(libs.protobuf.kotlin)
   implementation(libs.androidx.work.runtime)
     implementation(project(":fridainjector"))
+    implementation(project(":terminal-view"))
+    implementation(project(":terminal-emulator"))
 }
 
 protobuf {
