@@ -93,39 +93,47 @@ class HomeViewModel(
 
         isInjecting = true
         logs.add(0, "[System] 正在尝试注入: $pkg ...")
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val injector = FridaInjector.Builder(context)
-                    .withArm64Injector("frida-inject-17.9.1-android-arm64")
-                    .build()
-
-                // ✅ 修复：使用 viewModelScope.launch 而不是 withContext
-                injector.loggingCallback = { msg ->
+    
+    viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val injector = FridaInjector.Builder(context)
+                .withArm64Injector("frida-inject-17.9.1-android-arm64")
+                .build()
+            
+            val agent = FridaAgent.Builder(context)
+                .withAgentFromString(script.content)
+                .withOnMessage(this@HomeViewModel)
+                .build()
+            
+            // 使用新的 PTY 注入方法
+            injector.injectWithTerminalSession(
+                fridaAgent = agent,
+                packageName = pkg,
+                spawn = true,
+                onOutput = { msg ->
                     viewModelScope.launch(Dispatchers.Main) {
-                        logs.add(0, msg)
+                        logs.add(0, "[frida-out] $msg")
+                    }
+                },
+                onError = { msg ->
+                    viewModelScope.launch(Dispatchers.Main) {
+                        logs.add(0, "[frida-err] $msg")
+                    }
+                },
+                onComplete = {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        isInjecting = false
                     }
                 }
-
-                val agent = FridaAgent.Builder(context)
-                    .withAgentFromString(script.content)
-                    .withOnMessage(this@HomeViewModel)
-                    .build()
-
-                injector.inject(agent, pkg, spawn = true)
-
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    logs.add(0, "[Error] 注入失败: ${e.message}")
-                    e.printStackTrace()
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
-                    isInjecting = false
-                }
+            )
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                logs.add(0, "[Error] ${e.message}")
+                isInjecting = false
             }
         }
     }
+}
 
     fun clearLogs() {
         logs.clear()

@@ -166,5 +166,91 @@ class FridaInjector private constructor(builder: Builder) {
             injector = extractInjectorIfNeeded(context, selectedName)
             return FridaInjector(this)
         }
+    }   
+
+fun injectWithTerminalSession(
+    fridaAgent: FridaAgent,
+    packageName: String,
+    spawn: Boolean = false,
+    onOutput: (String) -> Unit,
+    onError: (String) -> Unit,
+    onComplete: () -> Unit
+) {
+    // 1. 准备脚本文件
+    val agentScript = StringBuilder(fridaAgent.wrappedAgent)
+    // ... (interfaces 处理代码保持不变)
+    
+    val fridaAgentFile = File(fridaAgent.filesDir, "wrapped_agent.js")
+    Utils.writeToFile(fridaAgentFile, agentScript.toString())
+    Shell.cmd("chmod 777 ${fridaAgentFile.path}").exec()
+    
+    // 2. 获取 PID（如果需要 spawn 模式）
+    if (spawn) {
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+        Shell.cmd("am force-stop $packageName").exec()
+        
+        launchIntent?.let {
+            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(it)
+        }
+        
+        // 等待进程启动
+        thread {
+            var pid: String? = null
+            while (pid == null) {
+                Thread.sleep(500)
+                pid = getPid(packageName)
+            }
+            Thread.sleep(1500) // 等待 Java 环境初始化
+            executeInjectWithTerminalSession(packageName, pid, fridaAgentFile.path, onOutput, onError, onComplete)
+        }
+    } else {
+        val pid = getPid(packageName)
+        if (pid != null) {
+            executeInjectWithTerminalSession(packageName, pid, fridaAgentFile.path, onOutput, onError, onComplete)
+        } else {
+            onError("[Error] 进程未运行: $packageName")
+            onComplete()
+        }
     }
+}
+
+private fun executeInjectWithTerminalSession(
+    packageName: String,
+    pid: String,
+    agentPath: String,
+    onOutput: (String) -> Unit,
+    onError: (String) -> Unit,
+    onComplete: () -> Unit
+) {
+    // 构建命令
+    val command = "${injector.path} -p $pid -s $agentPath -R qjs"
+    
+    onOutput("[System] 使用 PTY 终端执行: $command")
+    
+    // 创建终端会话
+    val terminalSession = FridaTerminalSession(
+        context = context,
+        command = command,
+        args = emptyArray(),
+        onOutput = { line ->
+            // 过滤掉 ANSI 转义序列
+            val cleanLine = line.replace(Regex("\\u001B\\[[;\\d]*[A-Za-z]"), "")
+            if (cleanLine.isNotBlank()) {
+                onOutput(cleanLine)
+            }
+        },
+        onError = onError,
+        onExit = { exitCode ->
+            if (exitCode == 0) {
+                onOutput("[Success] 注入完成")
+            } else {
+                onError("[Error] 注入失败，退出码: $exitCode")
+            }
+            onComplete()
+        }
+    )
+    
+    terminalSession.start()
+}
 }
