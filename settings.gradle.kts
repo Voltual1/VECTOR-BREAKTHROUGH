@@ -19,4 +19,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Vector-Breakthrough"
 include(":fridainjector")
+include(":terminal-view")
+include(":terminal-emulator")
 include(":app")
