@@ -91,7 +91,7 @@ fun TerminalViewAndroidView(
                 })
 
                 val session = TerminalSession(
-                    "/system/bin/su",
+                    "/system/xbin/su",
                     "/data/local/tmp",
                     arrayOf("sh"),
                     arrayOf("TERM=xterm-256color"),
