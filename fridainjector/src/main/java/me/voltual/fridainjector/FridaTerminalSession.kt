@@ -15,23 +15,22 @@ class FridaTerminalSession(
 ) : TerminalSessionClient {
 
     private var session: TerminalSession? = null
-    private val outputBuffer = StringBuilder()
-    private val errorBuffer = StringBuilder()
 
     fun start(columns: Int = 80, rows: Int = 24) {
-        // 构建完整的命令数组: ["sh", "-c", "full command"]
         val fullCommand = arrayOf("sh", "-c", "$command ${args.joinToString(" ")}")
+        val cwd = context.filesDir.absolutePath
+        val env = arrayOf("TERM=xterm-256color")
         
+        // 注意：TerminalSession 是 Java 类，不能使用命名参数，必须按顺序传参
         session = TerminalSession(
-            shellPath = "/system/bin/sh",
-            cwd = context.filesDir.absolutePath,
-            args = fullCommand,
-            env = arrayOf("TERM=xterm-256color"),
-            transcriptRows = 100,
-            client = this
+            "/system/bin/sh",   // shellPath
+            cwd,                // cwd
+            fullCommand,        // args
+            env,                // env
+            100,                // transcriptRows
+            this                // client
         )
         
-        // 更新终端大小
         session?.updateSize(columns, rows, 10, 20)
     }
 
@@ -47,23 +46,18 @@ class FridaTerminalSession(
         session?.finishIfRunning()
     }
 
-    // TerminalSessionClient 回调实现
-
+    // ---------- TerminalSessionClient 回调 ----------
     override fun onTextChanged(session: TerminalSession) {
-        // 这里会收到所有输出，但我们需要区分 stdout 和 stderr
-        // 由于 PTY 合并了 stdout 和 stderr，我们需要通过其他方式区分
-        // 简单起见，我们全部当作 stdout 处理
+        // 输出在 onCopyTextToClipboard 中处理
     }
 
     override fun onTitleChanged(session: TerminalSession) {}
 
     override fun onSessionFinished(session: TerminalSession) {
-        val exitCode = session.exitStatus
-        onExit(exitCode)
+        onExit(session.exitStatus)
     }
 
     override fun onCopyTextToClipboard(session: TerminalSession, text: String) {
-        // 可以选择将输出转发给 onOutput
         onOutput(text)
     }
 
