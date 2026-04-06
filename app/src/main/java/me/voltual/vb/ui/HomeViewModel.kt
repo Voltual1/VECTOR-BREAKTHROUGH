@@ -63,16 +63,12 @@ fun performInjectionInTerminal(session: TerminalSession) {
     if (script == null || pkg.isBlank()) return
     
     // 先确保 SELinux 是 Permissive 模式
-    session.write("su -c 'setenforce 0'\n")
-    
-    // 等待 500ms 让 su 执行完成
-    Handler(Looper.getMainLooper()).postDelayed({
+    session.write("su -c 'setenforce 0'\n")   
         val injectorPath = "/data/user/0/${context.packageName}/files/injector/frida-inject-17.9.1-android-arm64"
         val agentPath = "/data/local/tmp/wrapped_agent.js"
         
         val command = "su -c \"$injectorPath -n $pkg -s $agentPath --runtime=qjs -e\"\n"
         session.write(command)
-    }, 500)
 }
 
     fun checkRootPermission() {
