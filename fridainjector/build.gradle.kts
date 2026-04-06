@@ -44,6 +44,7 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugar)
       implementation(libs.libsu.core)
         implementation(libs.kotlinx.coroutines.android)
+    implementation(project(":terminal-emulator"))
 
 }
 
