@@ -7,3 +7,4 @@
 #    public static *** toString(...);
 #}
 -dontobfuscate
+-keepnames class ** { *; }
